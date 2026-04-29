@@ -687,7 +687,14 @@
                         <button on:click={() => (showPassword = !showPassword)}>
                             {showPassword ? "Hide" : "Show"}
                         </button>
-                        <button on:click={handleGenerate}>Generate</button>
+                        <button class="generate-btn" on:click={handleGenerate}>
+                            <span class="generate-text">Generate</span>
+                            <svg class="generate-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <rect width="18" height="18" x="3" y="3" rx="2" ry="2"/>
+                                <path d="M16 8h.01"/><path d="M8 8h.01"/><path d="M8 16h.01"/>
+                                <path d="M16 16h.01"/><path d="M12 12h.01"/>
+                            </svg>
+                        </button>
                         <button
                             class="icon-btn"
                             on:click={() =>
@@ -861,7 +868,10 @@
         font-size: 1.5rem;
         cursor: pointer;
     }
+    .generate-icon { display: none; }
     @media (max-width: 768px) {
+        .generate-text { display: none; }
+        .generate-icon { display: inline-flex; align-items: center; vertical-align: middle; }
         .sidebar {
             width: 100%;
             height: 100vh;
