@@ -15,6 +15,7 @@
 
     let currentHandle = null;
     let isCreating = false; // Mode switch for "Create New DB"
+    let showPassword = false;
 
     onMount(async () => {
         const recents = await get("recentFiles");
@@ -172,6 +173,7 @@
                     currentHandle = null;
                     password = "";
                     error = "";
+                    showPassword = false;
                 }}>Create New DB</button
             >
         </Menu>
@@ -183,7 +185,7 @@
             <p>Enter a password for the new database.</p>
             <div class="input-group">
                 <input
-                    type="password"
+                    type={showPassword ? "text" : "password"}
                     bind:value={password}
                     placeholder="New Password"
                     autofocus
@@ -196,14 +198,22 @@
             {#if error}
                 <div class="error">{error}</div>
             {/if}
-            <button
-                class="secondary"
-                on:click={() => {
-                    isCreating = false;
-                    password = "";
-                    error = "";
-                }}>Back</button
-            >
+            <div class="secondary-row">
+                <button
+                    class="secondary"
+                    type="button"
+                    on:click={() => (showPassword = !showPassword)}
+                >{showPassword ? "Hide" : "Show"}</button>
+                <button
+                    class="secondary"
+                    on:click={() => {
+                        isCreating = false;
+                        password = "";
+                        error = "";
+                        showPassword = false;
+                    }}>Back</button
+                >
+            </div>
         </div>
     {:else if !currentHandle}
         <div class="actions">
@@ -236,7 +246,7 @@
             <h2>Unlock {currentHandle.name}</h2>
             <div class="input-group">
                 <input
-                    type="password"
+                    type={showPassword ? "text" : "password"}
                     bind:value={password}
                     placeholder="Password"
                     autofocus
@@ -249,14 +259,22 @@
             {#if error}
                 <div class="error">{error}</div>
             {/if}
-            <button
-                class="secondary"
-                on:click={() => {
-                    currentHandle = null;
-                    password = "";
-                    error = "";
-                }}>Back</button
-            >
+            <div class="secondary-row">
+                <button
+                    class="secondary"
+                    type="button"
+                    on:click={() => (showPassword = !showPassword)}
+                >{showPassword ? "Hide" : "Show"}</button>
+                <button
+                    class="secondary"
+                    on:click={() => {
+                        currentHandle = null;
+                        password = "";
+                        error = "";
+                        showPassword = false;
+                    }}>Back</button
+                >
+            </div>
         </div>
     {/if}
 </div>
@@ -336,6 +354,11 @@
     .error {
         color: #ff6b6b;
         margin-bottom: 1rem;
+    }
+    .secondary-row {
+        display: flex;
+        gap: 0.5rem;
+        margin-top: 0.5rem;
     }
     .secondary {
         background: transparent;
