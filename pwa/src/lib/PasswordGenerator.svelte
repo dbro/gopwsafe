@@ -116,7 +116,7 @@
 {#if showOptions}
 <div class="pwgen-panel">
     <div class="panel-header">
-        <span class="panel-title">Generation options</span>
+        <span class="panel-title">Enabled characters</span>
         <label class="length-label">
             Length
             <input
@@ -290,7 +290,6 @@
         background: #1e1e1e;
         border-color: #333;
         color: #444;
-        text-decoration: line-through;
     }
     .char-btn:disabled {
         cursor: not-allowed;
