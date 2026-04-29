@@ -4,27 +4,28 @@
 
     export let showOptions = false;
 
-    const SYMBOL_CHARS = '!"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~'.split('');
-    const SYMBOL_DEFAULT_OFF = new Set(['"', "'", '<', '>', '\\', '`']);
+    const DEFAULT_EXCLUDED = "\"'<>\\`";
 
     const GROUPS = [
         { id: 'upper',   label: 'A–Z',     chars: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('') },
         { id: 'lower',   label: 'a–z',     chars: 'abcdefghijklmnopqrstuvwxyz'.split('') },
         { id: 'digits',  label: '0–9',     chars: '0123456789'.split('') },
-        { id: 'symbols', label: 'Symbols', chars: SYMBOL_CHARS },
+        { id: 'symbols', label: 'Symbols', chars: '!"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~'.split('') },
     ];
 
+    const VALID_STATES = new Set(['required', 'included', 'excluded']);
+
     function makeDefault() {
-        const groups = {};
-        for (const g of GROUPS) {
-            groups[g.id] = {
-                state: (g.id === 'upper' || g.id === 'lower') ? 'require' : 'allow',
-                chars: Object.fromEntries(
-                    g.chars.map(c => [c, g.id !== 'symbols' || !SYMBOL_DEFAULT_OFF.has(c)])
-                ),
-            };
-        }
-        return { length: 20, groups };
+        return {
+            length: 20,
+            excludedChars: DEFAULT_EXCLUDED,
+            groups: {
+                upper:   { state: 'required' },
+                lower:   { state: 'required' },
+                digits:  { state: 'included' },
+                symbols: { state: 'included' },
+            }
+        };
     }
 
     function load() {
@@ -32,39 +33,36 @@
             const raw = localStorage.getItem('pwgen');
             if (raw) {
                 const p = JSON.parse(raw);
-                if (typeof p.length !== 'number') return makeDefault();
-                for (const g of GROUPS) {
-                    if (!p.groups?.[g.id]) {
-                        p.groups[g.id] = makeDefault().groups[g.id];
-                    } else {
-                        for (const c of g.chars) {
-                            if (!(c in p.groups[g.id].chars)) {
-                                p.groups[g.id].chars[c] = !SYMBOL_DEFAULT_OFF.has(c);
-                            }
+                if (typeof p.length === 'number' && typeof p.excludedChars === 'string') {
+                    for (const g of GROUPS) {
+                        if (!p.groups?.[g.id] || !VALID_STATES.has(p.groups[g.id].state)) {
+                            return makeDefault();
                         }
                     }
+                    return p;
                 }
-                return p;
             }
         } catch (_) {}
         return makeDefault();
     }
 
     let s = load();
+    let error = '';
 
     function persist() {
         localStorage.setItem('pwgen', JSON.stringify(s));
     }
 
-    function setGroupState(id, state) {
-        s.groups[id].state = state;
-        s = s;
+    function reset() {
+        s = makeDefault();
+        error = '';
         persist();
     }
 
-    function toggleChar(id, c) {
-        s.groups[id].chars[c] = !s.groups[id].chars[c];
+    function setGroupState(id, state) {
+        s.groups[id].state = state;
         s = s;
+        error = '';
         persist();
     }
 
@@ -78,6 +76,23 @@
         }
     }
 
+    function updateExcluded(e) {
+        const seen = new Set();
+        const filtered = [];
+        for (const c of e.target.value) {
+            const code = c.charCodeAt(0);
+            if (code >= 0x21 && code <= 0x7E && !seen.has(c)) {
+                seen.add(c);
+                filtered.push(c);
+            }
+        }
+        s.excludedChars = filtered.join('');
+        e.target.value = s.excludedChars;
+        s = s;
+        error = '';
+        persist();
+    }
+
     function randInt(max) {
         const arr = new Uint32Array(1);
         const limit = Math.floor(0x100000000 / max) * max;
@@ -87,19 +102,26 @@
     }
 
     export function generate() {
+        error = '';
+        const excluded = new Set(s.excludedChars);
         let pool = [];
         let guaranteed = [];
+
         for (const g of GROUPS) {
             const gs = s.groups[g.id];
-            if (gs.state === 'off') continue;
-            const active = g.chars.filter(c => gs.chars[c]);
+            if (gs.state === 'excluded') continue;
+            const active = g.chars.filter(c => !excluded.has(c));
             if (!active.length) continue;
             pool.push(...active);
-            if (gs.state === 'require') {
+            if (gs.state === 'required') {
                 guaranteed.push(active[randInt(active.length)]);
             }
         }
-        if (!pool.length) return;
+
+        if (!pool.length) {
+            error = 'No characters available — adjust settings';
+            return;
+        }
 
         const len = s.length;
         const result = guaranteed.slice(0, len);
@@ -116,7 +138,7 @@
 {#if showOptions}
 <div class="pwgen-panel">
     <div class="panel-header">
-        <span class="panel-title">Enabled characters</span>
+        <span class="panel-title">Password options</span>
         <label class="length-label">
             Length
             <input
@@ -129,38 +151,42 @@
                 class="length-input"
             />
         </label>
+        <button class="reset-btn" on:click={reset} title="Reset to defaults">↺ Reset</button>
         <button class="collapse-btn" on:click={() => (showOptions = false)} title="Hide options">▲</button>
     </div>
 
     {#each GROUPS as g}
         {@const gs = s.groups[g.id]}
-        <div class="group" class:group-off={gs.state === 'off'}>
-            <div class="group-header">
-                <span class="group-label">{g.label}</span>
-                <div class="state-bar">
-                    {#each ['require', 'allow', 'off'] as state}
-                        <button
-                            class="state-btn"
-                            class:active={gs.state === state}
-                            on:click={() => setGroupState(g.id, state)}
-                        >{state}</button>
-                    {/each}
-                </div>
-            </div>
-            <div class="chars">
-                {#each g.chars as c}
+        <div class="group">
+            <span class="group-label">{g.label}</span>
+            <div class="state-bar">
+                {#each ['required', 'included', 'excluded'] as state}
                     <button
-                        class="char-btn"
-                        class:char-on={gs.chars[c] && gs.state !== 'off'}
-                        class:char-off={!gs.chars[c] && gs.state !== 'off'}
-                        disabled={gs.state === 'off'}
-                        on:click={() => toggleChar(g.id, c)}
-                        title={gs.chars[c] ? 'Click to exclude' : 'Click to include'}
-                    >{c}</button>
+                        class="state-btn state-{state}"
+                        class:active={gs.state === state}
+                        on:click={() => setGroupState(g.id, state)}
+                    >{state}</button>
                 {/each}
             </div>
         </div>
     {/each}
+
+    <div class="exclude-row">
+        <label class="exclude-label" for="exclude-input">Excluded</label>
+        <input
+            id="exclude-input"
+            class="exclude-input"
+            type="text"
+            value={s.excludedChars}
+            on:input={updateExcluded}
+            spellcheck="false"
+            autocomplete="off"
+        />
+    </div>
+
+    {#if error}
+        <div class="error-msg">{error}</div>
+    {/if}
 </div>
 {/if}
 
@@ -175,7 +201,7 @@
     .panel-header {
         display: flex;
         align-items: center;
-        gap: 12px;
+        gap: 10px;
         margin-bottom: 8px;
     }
     .panel-title {
@@ -201,6 +227,20 @@
         text-align: center;
         font-size: 0.85em;
     }
+    .reset-btn {
+        background: none;
+        border: 1px solid #555;
+        color: #888;
+        cursor: pointer;
+        font-size: 0.72em;
+        padding: 2px 7px;
+        border-radius: 3px;
+        line-height: 1.4;
+    }
+    .reset-btn:hover {
+        color: #ccc;
+        border-color: #888;
+    }
     .collapse-btn {
         background: none;
         border: none;
@@ -214,19 +254,16 @@
         color: #ccc;
     }
     .group {
-        margin-bottom: 6px;
-    }
-    .group-header {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        margin-bottom: 3px;
+        margin-bottom: 5px;
     }
     .group-label {
-        font-size: 0.75em;
-        color: #888;
+        font-size: 0.8em;
+        color: #aaa;
         font-weight: bold;
-        min-width: 48px;
+        min-width: 52px;
     }
     .state-bar {
         display: flex;
@@ -238,72 +275,63 @@
         background: none;
         border: none;
         border-right: 1px solid #555;
-        color: #888;
-        font-size: 0.7em;
-        padding: 2px 7px;
+        color: #666;
+        font-size: 0.72em;
+        padding: 3px 9px;
         cursor: pointer;
-        text-transform: capitalize;
     }
     .state-btn:last-child {
         border-right: none;
     }
-    .state-btn.active {
-        background: #555;
-        color: #fff;
-    }
     .state-btn:hover:not(.active) {
         background: #3a3a3a;
-        color: #ccc;
+        color: #aaa;
     }
-    .chars {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 3px;
+    .state-btn.state-required.active {
+        background: #1a3a1a;
+        color: #4caf50;
+        font-weight: bold;
     }
-    .char-btn {
-        width: 22px;
-        height: 22px;
-        font-size: 0.78em;
-        font-family: monospace;
-        padding: 0;
-        border-radius: 3px;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border: 1px solid #3a3a3a;
-        background: #1e1e1e;
-        color: #555;
-        transition: transform 0.08s ease;
-        position: relative;
-    }
-    .char-btn:hover {
-        transform: scale(2.5);
-        z-index: 10;
-    }
-    .char-btn.char-on {
-        background: #3c3c3c;
-        border-color: #666;
+    .state-btn.state-included.active {
+        background: #3a3a3a;
         color: #e0e0e0;
     }
-    .char-btn.char-off {
-        background: #1e1e1e;
-        border-color: #333;
-        color: #444;
+    .state-btn.state-excluded.active {
+        background: #3a1a1a;
+        color: #e05555;
+        font-weight: bold;
     }
-    .char-btn:disabled {
-        cursor: not-allowed;
-        opacity: 0.35;
+    .exclude-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 7px;
     }
-    .char-btn:not(:disabled).char-on:hover {
-        background: #505050;
-        border-color: #888;
+    .exclude-label {
+        font-size: 0.75em;
+        color: #e05555;
+        font-weight: bold;
+        min-width: 52px;
     }
-    .char-btn:not(:disabled).char-off:hover {
-        background: #2a2a2a;
-        border-color: #555;
+    .exclude-input {
+        flex: 1;
+        background: #2a1a1a;
+        border: 1px solid #7a3333;
+        color: #e05555;
+        border-radius: 4px;
+        padding: 3px 6px;
+        font-family: monospace;
+        font-size: 0.85em;
+        letter-spacing: 0.08em;
     }
-    @media (max-width: 768px) {
-        .chars { display: none; }
+    .exclude-input:focus {
+        outline: none;
+        border-color: #e05555;
+    }
+    .error-msg {
+        margin-top: 6px;
+        font-size: 0.75em;
+        color: #e05555;
+        text-align: center;
     }
 </style>
