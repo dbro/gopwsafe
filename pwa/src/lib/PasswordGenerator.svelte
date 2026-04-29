@@ -298,4 +298,7 @@
         background: #2a2a2a;
         border-color: #555;
     }
+    @media (max-width: 768px) {
+        .chars { display: none; }
+    }
 </style>
