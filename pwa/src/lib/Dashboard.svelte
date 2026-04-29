@@ -32,6 +32,12 @@
 
     let isDirty = false;
 
+    let collapseAtStartup = localStorage.getItem('collapseAtStartup') === 'true';
+    function toggleCollapseAtStartup() {
+        collapseAtStartup = !collapseAtStartup;
+        localStorage.setItem('collapseAtStartup', String(collapseAtStartup));
+    }
+
     let showModal = false;
     let modalConfig = {
         title: "",
@@ -508,6 +514,15 @@
                         closeDb();
                     }}>Close DB</button
                 >
+                <hr
+                    style="border: 0; border-top: 1px solid #444; margin: 5px 0;"
+                />
+                <button
+                    on:click={() => {
+                        close();
+                        toggleCollapseAtStartup();
+                    }}>{collapseAtStartup ? '✓' : '\u00a0\u00a0'} Collapse at startup</button
+                >
             </Menu>
             <!-- Visual Indicator for Dirty State (e.g. dot on menu or title?) 
                  Since we don't have a title bar here (it's in toolbar), maybe add a dot next to Menu?
@@ -561,7 +576,7 @@
 
         <div class="tree">
             {#each Object.keys(groupedItems) as group}
-                <details open>
+                <details open={!collapseAtStartup || !!searchTerm}>
                     <summary tabindex="0" on:keydown={handleTreeNavigation}
                         >{group}</summary
                     >
