@@ -565,9 +565,12 @@
                     <summary tabindex="0" on:keydown={handleTreeNavigation}
                         >{group}</summary
                     >
-                    <ul>
+                    <ul role="listbox">
                         {#each groupedItems[group] as item}
                             <li
+                                role="option"
+                                aria-selected={!!(selectedRecord &&
+                                    selectedRecord.Title === item.title)}
                                 tabindex="0"
                                 class:selected={selectedRecord &&
                                     selectedRecord.Title === item.title}
@@ -601,8 +604,9 @@
                 </div>
 
                 <div class="field">
-                    <label>Title</label>
+                    <label for="record-title">Title</label>
                     <input
+                        id="record-title"
                         type="text"
                         bind:value={selectedRecord.Title}
                         placeholder="Title"
@@ -610,8 +614,9 @@
                 </div>
 
                 <div class="field">
-                    <label>Group</label>
+                    <label for="record-group">Group</label>
                     <input
+                        id="record-group"
                         type="text"
                         bind:value={selectedRecord.Group}
                         placeholder="Group"
@@ -619,9 +624,10 @@
                 </div>
 
                 <div class="field">
-                    <label>Username</label>
+                    <label for="record-username">Username</label>
                     <div class="field-row">
                         <input
+                            id="record-username"
                             type="text"
                             bind:value={selectedRecord.Username}
                             placeholder="Username"
@@ -663,9 +669,10 @@
                     </div>
                 </div>
                 <div class="field">
-                    <label>Password</label>
+                    <label for="record-password">Password</label>
                     <div class="password-row">
                         <input
+                            id="record-password"
                             type={showPassword ? "text" : "password"}
                             bind:value={selectedRecord.Password}
                             placeholder="Password"
@@ -710,9 +717,10 @@
                     </div>
                 </div>
                 <div class="field">
-                    <label>URL</label>
+                    <label for="record-url">URL</label>
                     <div class="field-row">
                         <input
+                            id="record-url"
                             type="text"
                             bind:value={selectedRecord.URL}
                             placeholder="URL"
@@ -730,8 +738,9 @@
                     </div>
                 </div>
                 <div class="field">
-                    <label>Notes</label>
+                    <label for="record-notes">Notes</label>
                     <textarea
+                        id="record-notes"
                         bind:value={selectedRecord.Notes}
                         rows="5"
                         placeholder="Notes"
@@ -816,10 +825,6 @@
         font-weight: bold;
         color: #ccc;
     }
-    .footer {
-        padding: 10px;
-        border-top: 1px solid #333;
-    }
     .main-content {
         flex: 1;
         padding: 20px;
@@ -898,7 +903,6 @@
         width: auto;
         min-width: 0;
     }
-    pre,
     textarea {
         background: #2d2d2d;
         padding: 10px;
