@@ -274,6 +274,12 @@
         border: 1px solid #3a3a3a;
         background: #1e1e1e;
         color: #555;
+        transition: transform 0.08s ease;
+        position: relative;
+    }
+    .char-btn:hover {
+        transform: scale(2.5);
+        z-index: 10;
     }
     .char-btn.char-on {
         background: #3c3c3c;
