@@ -15,6 +15,7 @@
     import Modal from "./Modal.svelte";
 
     import DBInfo from "./DBInfo.svelte";
+    import PasswordGenerator from "./PasswordGenerator.svelte";
 
     const dispatch = createEventDispatcher();
 
@@ -31,6 +32,16 @@
     let isNewRecord = false;
 
     let isDirty = false;
+
+    let generator;
+    let genClickCount = 0;
+    let showGenOptions = false;
+
+    function handleGenerate() {
+        genClickCount++;
+        generator.generate();
+        if (genClickCount >= 2) showGenOptions = true;
+    }
 
     let collapseAtStartup = localStorage.getItem('collapseAtStartup') === 'true';
     function toggleCollapseAtStartup() {
@@ -168,6 +179,8 @@
             oldTitle = rec.Title; // Store original title
             showPassword = false;
             isNewRecord = false;
+            genClickCount = 0;
+            showGenOptions = false;
         } catch (e) {
             console.error(e);
             alert("Failed to load record details");
@@ -191,6 +204,8 @@
         oldTitle = "";
         showPassword = true;
         isNewRecord = true;
+        genClickCount = 0;
+        showGenOptions = false;
     }
 
     // Bind this to the new record event from the menu
@@ -688,6 +703,7 @@
                         <button on:click={() => (showPassword = !showPassword)}>
                             {showPassword ? "Hide" : "Show"}
                         </button>
+                        <button on:click={handleGenerate}>Generate</button>
                         <button
                             class="icon-btn"
                             on:click={() =>
@@ -724,6 +740,14 @@
                         {/if}
                     </div>
                 </div>
+                <PasswordGenerator
+                    bind:this={generator}
+                    bind:showOptions={showGenOptions}
+                    on:generate={(e) => {
+                        selectedRecord.Password = e.detail;
+                        showPassword = true;
+                    }}
+                />
                 <div class="field">
                     <label>URL</label>
                     <div class="field-row">
