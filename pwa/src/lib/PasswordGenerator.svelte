@@ -1,5 +1,6 @@
 <script>
     import { createEventDispatcher } from 'svelte';
+    import { slide } from 'svelte/transition';
     const dispatch = createEventDispatcher();
 
     export let showOptions = false;
@@ -136,7 +137,7 @@
 </script>
 
 {#if showOptions}
-<div class="pwgen-panel">
+<div class="pwgen-panel" transition:slide={{ duration: 200 }}>
     <div class="panel-header">
         <span class="panel-title">Password options</span>
         <label class="length-label">
@@ -152,7 +153,6 @@
             />
         </label>
         <button class="reset-btn" on:click={reset} title="Reset to defaults">↺ Reset</button>
-        <button class="collapse-btn" on:click={() => (showOptions = false)} title="Hide options">▲</button>
     </div>
 
     {#each GROUPS as g}
@@ -240,18 +240,6 @@
     .reset-btn:hover {
         color: #ccc;
         border-color: #888;
-    }
-    .collapse-btn {
-        background: none;
-        border: none;
-        color: #666;
-        cursor: pointer;
-        font-size: 0.75em;
-        padding: 2px 4px;
-        line-height: 1;
-    }
-    .collapse-btn:hover {
-        color: #ccc;
     }
     .group {
         display: flex;
