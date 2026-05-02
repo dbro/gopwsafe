@@ -5,13 +5,44 @@
 image:https://goreportcard.com/badge/github.com/tkuhlman/gopwsafe["Go Report Card",link="https://goreportcard.com/report/github.com/tkuhlman/gopwsafe"]
 image:https://pkg.go.dev/badge/github.com/tkuhlman/gopwsafe.svg["Go Reference",link="https://pkg.go.dev/github.com/tkuhlman/gopwsafe"]
 
-A password safe written in go using and implementing the http://pwsafe.org/[password safe] version 3 database.
+A password safe written in Go implementing the http://pwsafe.org/[Password Safe] version 3 database format.
 
-The pwsafe package is a library for reading/writing to Password Safe v3 databases.
-The pwa directory contains a [Svelte](https://svelte.dev) frontend for the pwsafe package that can be installed locally as a Progressive Web App (PWA).
-The pwa works great both on mobile or desktop and when installed is fully available offline.
-Try it out at https://backgroundprocess.com/gopwsafe
+== How it works
 
+gopwsafe runs entirely in your browser: a Go binary compiled to WebAssembly handles all cryptography and database parsing client-side, so your password database and master password never leave your device.
+The Svelte frontend loads the WASM module, lets you open or create a `.psafe3` file from your local filesystem, and stores nothing remotely.
+Because it is packaged as a Progressive Web App (PWA), it can be installed to your home screen and used fully offline.
+
+== Installation
+
+=== Install as a Web App (recommended)
+
+Visit https://backgroundprocess.com/gopwsafe in a modern browser (Chrome, Edge, Firefox, or Safari).
+Click the *Install* button that appears in your browser's address bar or the in-page install prompt to add gopwsafe to your home screen or app launcher.
+Once installed it works offline without any further setup.
+
+=== Self-host / compile from source
+
+**Prerequisites:** Go 1.21+, Node.js 18+
+
+1. Build the WebAssembly binary:
++
+[source,bash]
+----
+GOOS=js GOARCH=wasm go build -o pwa/public/gopwsafe.wasm ./cmd/wasm/
+----
+
+2. Build and preview the frontend:
++
+[source,bash]
+----
+cd pwa
+npm install
+npm run build
+npm run preview
+----
+
+The app requires HTTPS (or localhost) for the Clipboard and File System Access APIs to work.
 
 == References
 - V3 Password Safe Specification - https://github.com/pwsafe/pwsafe/blob/master/docs/formatV3.txt
