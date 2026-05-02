@@ -257,19 +257,25 @@
         display: flex;
         border: 1px solid #555;
         border-radius: 3px;
-        overflow: hidden;
     }
     .state-btn {
         background: none;
         border: none;
         border-right: 1px solid #555;
+        border-radius: 0;
         color: #666;
         font-size: 0.72em;
+        font-weight: 500;
         padding: 3px 9px;
         cursor: pointer;
+        white-space: nowrap;
+    }
+    .state-btn:first-child {
+        border-radius: 2px 0 0 2px;
     }
     .state-btn:last-child {
         border-right: none;
+        border-radius: 0 2px 2px 0;
     }
     .state-btn:hover:not(.active) {
         background: #3a3a3a;
@@ -277,17 +283,15 @@
     }
     .state-btn.state-required.active {
         background: #1a3a1a;
-        color: #4caf50;
-        font-weight: bold;
+        color: #5cca60;
     }
     .state-btn.state-included.active {
-        background: #3a3a3a;
-        color: #e0e0e0;
+        background: #2d2d2d;
+        color: #d0d0d0;
     }
     .state-btn.state-excluded.active {
         background: #3a1a1a;
-        color: #e05555;
-        font-weight: bold;
+        color: #ef6060;
     }
     .exclude-row {
         display: flex;
