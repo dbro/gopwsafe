@@ -31,7 +31,7 @@ test.describe('UI Improvements', () => {
         // Should have empty tree
         await expect(page.locator('.sidebar')).toBeVisible();
         // search input check
-        await expect(page.getByPlaceholder('Search...')).toBeVisible();
+        await expect(page.getByPlaceholder(/Search/)).toBeVisible();
     });
 
     test('should have functioning dashboard menu', async ({ page }) => {
@@ -62,7 +62,7 @@ test.describe('UI Improvements', () => {
         // 1. Autofocus Check
         // Need to wait slightly for timeout
         await page.waitForTimeout(200);
-        await expect(page.getByPlaceholder('Search...')).toBeFocused();
+        await expect(page.getByPlaceholder(/Search/)).toBeFocused();
 
         // 2. DB Info Check
         await page.locator('.hamburger').click();
@@ -72,43 +72,8 @@ test.describe('UI Improvements', () => {
         await expect(page.getByText('Database Info')).toBeVisible();
         await page.locator('.modal .footer button').click();
 
-        // 3. Save DB Check
-        // Menu is likely still open because alert doesn't close DOM elements usually, but let's check
-        // ... (truncated in my mind, but I need to match TargetContent for tool)
-        // Oops, I can't replace non-contiguous blocks with replace_file_content.
-        // I need to only replace the first block here, then second block.
-        // Or use multi_replace. 
-        // Let's use multi_replace.
-
-        // 3. Save DB Check
-        // Menu is likely still open because alert doesn't close DOM elements usually, but let's check
-        if (!await page.getByText('Save DB').isVisible()) {
-            await page.locator('.hamburger').click();
-        }
-        await expect(page.getByText('Save DB')).toBeVisible();
-
-        // Save functionality is covered in write_ops.spec.js.
-        // We skip clicking here to avoid flaky dialog interactions in this specific test suite.
-        /*
-        page.once('dialog', async dialog => {
-            console.log(`Dialog message: ${dialog.message()}`);
-            try {
-                expect(dialog.message()).toContain('saved successfully');
-            } catch (e) {
-                console.error('Dialog check failed', e);
-            } finally {
-                await dialog.dismiss();
-            }
-        });
-        await page.getByText('Save DB').click();
-        */
-
-        // Wait for save operation
-        await page.waitForTimeout(500);
-
-        // 4. Close DB Check
-        // If dirty state is implemented, we might get a dialog on close if we didn't save.
-        // But here we just saved, so it should be clean.
+        // 3. Close DB
+        await page.locator('.hamburger').click();
         await page.getByText('Close DB').click();
         await expect(page.locator('.start-page h1')).toHaveText('Password Safe');
     });
@@ -267,30 +232,30 @@ test.describe('UI Improvements', () => {
 
         // Wait for dashboard and initial autofocus
         await expect(page.locator('.sidebar')).toBeVisible();
-        await expect(page.getByPlaceholder('Search...')).toBeFocused();
+        await expect(page.getByPlaceholder(/Search/)).toBeFocused();
 
         // Blur search by clicking tree
         await page.locator('.tree').click();
-        await expect(page.getByPlaceholder('Search...')).not.toBeFocused();
+        await expect(page.getByPlaceholder(/Search/)).not.toBeFocused();
 
         // Press / to focus
         await page.keyboard.press('/');
-        await expect(page.getByPlaceholder('Search...')).toBeFocused();
+        await expect(page.getByPlaceholder(/Search/)).toBeFocused();
 
         // Type something
         await page.keyboard.type('old');
-        await expect(page.getByPlaceholder('Search...')).toHaveValue('old');
+        await expect(page.getByPlaceholder(/Search/)).toHaveValue('old');
 
         // Blur
         await page.locator('.tree').click();
-        await expect(page.getByPlaceholder('Search...')).not.toBeFocused();
+        await expect(page.getByPlaceholder(/Search/)).not.toBeFocused();
 
         // Press / to focus again
         await page.keyboard.press('/');
-        await expect(page.getByPlaceholder('Search...')).toBeFocused();
+        await expect(page.getByPlaceholder(/Search/)).toBeFocused();
 
         // Check selection covers "old"
-        const finalSelection = await page.getByPlaceholder('Search...').evaluate((el: HTMLInputElement) => ({
+        const finalSelection = await page.getByPlaceholder(/Search/).evaluate((el: HTMLInputElement) => ({
             start: el.selectionStart,
             end: el.selectionEnd,
             value: el.value
@@ -300,7 +265,7 @@ test.describe('UI Improvements', () => {
 
         // Verify typing overwrite
         await page.keyboard.type('new');
-        await expect(page.getByPlaceholder('Search...')).toHaveValue('new');
+        await expect(page.getByPlaceholder(/Search/)).toHaveValue('new');
 
     });
 
@@ -331,12 +296,12 @@ test.describe('UI Improvements', () => {
         await page.getByRole('button', { name: 'Unlock' }).click();
 
         // Search for a unique item
-        await page.getByPlaceholder('Search...').fill('three entry 1');
+        await page.getByPlaceholder(/Search/).fill('three entry 1');
         // Wait for filter to apply
         await expect(page.locator('.tree li')).toHaveCount(1);
 
         // Verify search is focused
-        await expect(page.getByPlaceholder('Search...')).toBeFocused();
+        await expect(page.getByPlaceholder(/Search/)).toBeFocused();
 
         // Press Enter
         await page.keyboard.press('Enter');
@@ -347,7 +312,7 @@ test.describe('UI Improvements', () => {
 
         // Verify input lost focus (Focus moves to close button or body)
         // Wait for potential async focus switch
-        await expect(page.getByPlaceholder('Search...')).not.toBeFocused({ timeout: 5000 });
+        await expect(page.getByPlaceholder(/Search/)).not.toBeFocused({ timeout: 5000 });
     });
 
     test('should navigate tree with keyboard', async ({ page }) => {
@@ -376,7 +341,7 @@ test.describe('UI Improvements', () => {
         await page.getByRole('button', { name: 'Unlock' }).click();
 
         // Search to start somewhere or just focus search then down
-        const search = page.getByPlaceholder('Search...');
+        const search = page.getByPlaceholder(/Search/);
 
         // Wait for tree to be populated and items to be rendered
         await expect(page.locator('.tree details summary').first()).toBeVisible();
