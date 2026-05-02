@@ -226,25 +226,15 @@
     });
 
     function filterItems() {
-        console.log(
-            "filterItems called. searchTerm:",
-            searchTerm,
-            "Total items:",
-            items.length,
-        );
-        if (!searchTerm) {
+        if (!searchTerm.trim()) {
             filteredItems = items;
         } else {
-            const lower = searchTerm.toLowerCase();
-            filteredItems = items.filter(
-                (i) =>
-                    i.title.toLowerCase().includes(lower) ||
-                    i.group.toLowerCase().includes(lower),
-            );
-        }
-        console.log("Filtered items count:", filteredItems.length);
-        if (filteredItems.length === 0 && items.length > 0) {
-            console.log("First item title:", items[0].title);
+            const terms = searchTerm.toLowerCase().split(/\s+/).filter(Boolean);
+            filteredItems = items.filter((i) => {
+                const title = i.title.toLowerCase();
+                const group = i.group.toLowerCase();
+                return terms.every((t) => title.includes(t) || group.includes(t));
+            });
         }
         groupItems(filteredItems);
     }
