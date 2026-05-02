@@ -203,7 +203,7 @@
         }
     }
 
-    async function save() {
+    async function save(silent = false) {
         try {
             const data = saveDatabase(); // Uint8Array
             let handle = $selectedFile ? $selectedFile.handle : null;
@@ -230,11 +230,13 @@
             await writable.write(data);
             await writable.close();
 
-            triggerModal({
-                title: "Success",
-                message: "Database saved successfully!",
-                type: "alert",
-            });
+            if (!silent) {
+                triggerModal({
+                    title: "Success",
+                    message: "Database saved successfully!",
+                    type: "alert",
+                });
+            }
             isDirty = false;
 
             // update store if it was a new file
@@ -253,7 +255,7 @@
         }
     }
 
-    function saveRecord() {
+    async function saveRecord() {
         try {
             if (!selectedRecord.Title) {
                 alert("Title is required");
@@ -286,7 +288,9 @@
         } catch (e) {
             console.error("saveRecord failed:", e);
             alert("Failed to save record: " + e.message);
+            return;
         }
+        await save(true);
     }
 
     function deleteCurrentRecord() {
@@ -301,7 +305,7 @@
         });
     }
 
-    function performDelete() {
+    async function performDelete() {
         try {
             deleteRecord(selectedRecord.Title);
             selectedRecord = null;
@@ -314,7 +318,9 @@
         } catch (e) {
             console.error(e);
             alert("Failed to delete record: " + e.message);
+            return;
         }
+        await save(true);
     }
 
     function showDBInfo() {
@@ -486,12 +492,6 @@
                         close();
                         createNewRecord();
                     }}>New Record</button
-                >
-                <button
-                    on:click={() => {
-                        close();
-                        save();
-                    }}>Save DB</button
                 >
                 <button
                     on:click={() => {
