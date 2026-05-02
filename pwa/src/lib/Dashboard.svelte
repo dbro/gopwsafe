@@ -35,6 +35,7 @@
     let isDirty = false;
 
     let contextMenu = null; // { x, y, rec }
+    let lastCopiedText = null; // tracks text copied from this app for clipboard clearing on exit
 
     function openContextMenu(e, item) {
         e.preventDefault();
@@ -51,6 +52,7 @@
         if (!text) return;
         try {
             await navigator.clipboard.writeText(text);
+            lastCopiedText = text;
         } catch (err) {
             console.error("Failed to copy", err);
         }
@@ -133,6 +135,7 @@
     async function copyToClipboard(text, type) {
         try {
             await navigator.clipboard.writeText(text);
+            lastCopiedText = text;
             if (type === "user") {
                 copyUserSuccess = true;
                 setTimeout(() => (copyUserSuccess = false), 2000);
@@ -145,6 +148,19 @@
             }
         } catch (err) {
             console.error("Failed to copy!", err);
+        }
+    }
+
+    async function clearClipboardIfOwned() {
+        if (!lastCopiedText) return;
+        try {
+            const current = await navigator.clipboard.readText();
+            if (current === lastCopiedText) {
+                await navigator.clipboard.writeText('');
+                lastCopiedText = null;
+            }
+        } catch (err) {
+            // Clipboard read permission denied or unavailable — skip
         }
     }
 
@@ -405,12 +421,14 @@
                 confirmLabel: "Close without saving",
                 type: "confirm",
                 onConfirm: () => {
+                    clearClipboardIfOwned();
                     dispatch("close");
                     isDirty = false;
                 },
             });
             return;
         }
+        clearClipboardIfOwned();
         dispatch("close");
         isDirty = false;
     }
@@ -421,6 +439,16 @@
             e.preventDefault();
             e.returnValue = "";
         }
+    });
+
+    // Clear clipboard on tab hide/close if the contents came from this app
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'hidden') {
+            clearClipboardIfOwned();
+        }
+    });
+    window.addEventListener('pagehide', () => {
+        clearClipboardIfOwned();
     });
     function handleTreeNavigation(e) {
         if (e.key === "ArrowDown" || e.key === "ArrowUp") {
@@ -635,6 +663,16 @@
                                 class:selected={selectedRecord &&
                                     selectedRecord.Title === item.title}
                                 on:click={() => selectItem(item)}
+                                on:dblclick={async () => {
+                                    try {
+                                        const rec = getRecordData(item.title);
+                                        if (rec && rec.Password) {
+                                            await copyToClipboard(rec.Password, 'pass');
+                                        }
+                                    } catch (err) {
+                                        console.error("Double-click copy failed", err);
+                                    }
+                                }}
                                 on:contextmenu={(e) => openContextMenu(e, item)}
                                 on:keydown={(e) => {
                                     if (e.key === "Enter") {
