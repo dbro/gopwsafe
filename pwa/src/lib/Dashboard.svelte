@@ -120,6 +120,19 @@
     let generator;
     let showGenOptions = false;
 
+    let searchAllFields = localStorage.getItem('searchAllFields') === 'true';
+    let fullRecordCache = null; // null = stale, populated on first all-fields search
+
+    function loadFullRecordCache() {
+        fullRecordCache = items.map(item => {
+            try { return getRecordData(item.title); } catch { return null; }
+        }).filter(Boolean);
+    }
+
+    function invalidateCache() {
+        fullRecordCache = null;
+    }
+
     let collapseAtStartup = localStorage.getItem('collapseAtStartup') === 'true';
     function toggleCollapseAtStartup() {
         collapseAtStartup = !collapseAtStartup;
@@ -218,6 +231,7 @@
 
     dbItems.subscribe((val) => {
         items = val || [];
+        invalidateCache();
         filterItems();
         // Autofocus search when items are loaded (DB opened)
         setTimeout(() => {
@@ -230,11 +244,22 @@
             filteredItems = items;
         } else {
             const terms = searchTerm.toLowerCase().split(/\s+/).filter(Boolean);
-            filteredItems = items.filter((i) => {
-                const title = i.title.toLowerCase();
-                const group = i.group.toLowerCase();
-                return terms.every((t) => title.includes(t) || group.includes(t));
-            });
+            if (searchAllFields) {
+                if (!fullRecordCache) loadFullRecordCache();
+                filteredItems = fullRecordCache
+                    .filter(rec => {
+                        const hay = [rec.Title, rec.Group, rec.Username, rec.URL, rec.Notes]
+                            .join('\n').toLowerCase();
+                        return terms.every(t => hay.includes(t));
+                    })
+                    .map(rec => ({ title: rec.Title, group: rec.Group }));
+            } else {
+                filteredItems = items.filter((i) => {
+                    const title = i.title.toLowerCase();
+                    const group = i.group.toLowerCase();
+                    return terms.every((t) => title.includes(t) || group.includes(t));
+                });
+            }
         }
         groupItems(filteredItems);
     }
@@ -659,7 +684,7 @@
             <input
                 bind:this={searchInput}
                 type="text"
-                placeholder="Search..."
+                placeholder={searchAllFields ? "Search all fields…" : "Search title & group…"}
                 bind:value={searchTerm}
                 on:input={filterItems}
                 on:keydown={(e) => {
@@ -696,6 +721,17 @@
                     }
                 }}
             />
+            <label class="scope-label" title={searchAllFields ? "Searching all fields" : "Searching title and group only"}>
+                <input
+                    type="checkbox"
+                    bind:checked={searchAllFields}
+                    on:change={() => {
+                        localStorage.setItem('searchAllFields', String(searchAllFields));
+                        filterItems();
+                    }}
+                />
+                All fields
+            </label>
         </div>
 
         <div class="tree">
@@ -1043,12 +1079,27 @@
         gap: 10px;
         align-items: center;
     }
-    .toolbar input {
-        width: 100%;
+    .toolbar input[type="text"] {
+        flex: 1;
+        min-width: 0;
         padding: 5px;
         background: #3c3c3c;
         border: 1px solid #555;
         color: #fff;
+    }
+    .scope-label {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 0.78em;
+        color: #888;
+        white-space: nowrap;
+        cursor: pointer;
+        user-select: none;
+        flex-shrink: 0;
+    }
+    .scope-label:hover {
+        color: #bbb;
     }
     .tree {
         flex: 1;

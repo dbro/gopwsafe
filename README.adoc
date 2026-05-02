@@ -44,5 +44,13 @@ npm run preview
 
 The app requires HTTPS (or localhost) for the Clipboard and File System Access APIs to work.
 
+== Security notes
+
+All cryptography runs client-side in WebAssembly — your master password and database contents never leave your device.
+
+Browser extensions with host permissions can inject JavaScript into any page, including this one, and could read decrypted passwords from memory.
+This is a limitation of any browser-based password manager.
+For the strongest isolation, install gopwsafe as a PWA on *iOS or iPadOS* (Add to Home Screen) or *macOS Safari* (Add to Dock): home-screen web apps on these platforms run in a dedicated process where browser extensions do not execute.
+
 == References
 - V3 Password Safe Specification - https://github.com/pwsafe/pwsafe/blob/master/docs/formatV3.txt
