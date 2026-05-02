@@ -17,7 +17,7 @@ Because it is packaged as a Progressive Web App (PWA), it can be installed to yo
 
 === Install as a Web App (recommended)
 
-Visit https://backgroundprocess.com/gopwsafe in a modern browser (Chrome, Edge, Firefox, or Safari).
+Visit https://dbro.github.io/gopwsafe in a modern browser (Chrome, Edge, Firefox, or Safari).
 Click the *Install* button that appears in your browser's address bar or the in-page install prompt to add gopwsafe to your home screen or app launcher.
 Once installed it works offline without any further setup.
 
