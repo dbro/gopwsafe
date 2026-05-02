@@ -197,6 +197,7 @@
         padding: 8px 10px;
         background: #2a2a2a;
         margin-top: 6px;
+        margin-bottom: 20px;
     }
     .panel-header {
         display: flex;
