@@ -13,6 +13,8 @@ gopwsafe runs entirely in your browser: a Go binary compiled to WebAssembly hand
 The Svelte frontend loads the WASM module, lets you open or create a `.psafe3` file from your local filesystem, and stores nothing remotely.
 Because it is packaged as a Progressive Web App (PWA), it can be installed to your home screen and used fully offline.
 
+image::gopwsafe-screenshot.png[Screenshot of gopwsafe, width=33%]
+
 == Installation
 
 === Install as a Web App (recommended)
