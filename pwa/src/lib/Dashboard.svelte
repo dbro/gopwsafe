@@ -778,15 +778,26 @@
         padding: 10px;
         border-bottom: 1px solid #333;
         display: flex;
-        gap: 10px;
+        flex-wrap: wrap;
+        gap: 8px;
         align-items: center;
     }
-    .toolbar input {
-        width: 100%;
+    .toolbar input[type="text"] {
+        flex: 1;
+        min-width: 0;
         padding: 5px;
         background: #3c3c3c;
         border: 1px solid #555;
         color: #fff;
+    }
+    .scope-label {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        white-space: nowrap;
+        font-size: 0.8em;
+        color: #aaa;
+        cursor: pointer;
     }
     .tree {
         flex: 1;
