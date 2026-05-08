@@ -7,8 +7,7 @@
         getRecordData,
         getDatabaseInfo,
         saveDatabase,
-        addRecord,
-        updateRecord,
+        updateRecordFields,
         deleteRecord,
         getDatabaseData,
         searchRecords,
@@ -58,32 +57,12 @@
         return { enabled, max, entries };
     }
 
-    function serializePasswordHistory(h) {
-        const body = h.entries.map(e => {
-            const t = Math.floor(e.timestamp).toString(16).padStart(8, '0');
-            const l = e.password.length.toString(16).padStart(4, '0');
-            return t + l + e.password;
-        }).join('');
-        return (h.enabled ? '1' : '0')
-            + h.max.toString(16).padStart(2, '0')
-            + h.entries.length.toString(16).padStart(2, '0')
-            + body;
-    }
-
-    function pushPasswordHistory(raw, oldPassword) {
-        let h = parsePasswordHistory(raw) ?? { enabled: true, max: 10, entries: [] };
-        if (!h.enabled) return raw;
-        h.entries.push({ timestamp: Date.now() / 1000, password: oldPassword });
-        while (h.entries.length > h.max) h.entries.shift();
-        return serializePasswordHistory(h);
-    }
-
     let items = [];
     let filteredItems = [];
     let searchTerm = "";
     let searchNamesOnly = localStorage.getItem('searchNamesOnly') !== 'false';
     let selectedRecord = null;
-    let oldTitle = ""; // Track for renames
+    let selectedUUID = "";
     let showPassword = false;
     let groupedItems = {};
     let searchInput; // Reference for autofocus
@@ -177,7 +156,7 @@
     function openContextMenu(e, item) {
         e.preventDefault();
         try {
-            const rec = getRecordData(item.title);
+            const rec = getRecordData(item.uuid);
             contextMenu = { x: e.clientX, y: e.clientY, rec };
         } catch (err) {
             console.error("Context menu: failed to load record", err);
@@ -323,8 +302,8 @@
         if (!searchTerm.trim()) {
             filteredItems = items;
         } else {
-            const matchedTitles = new Set(searchRecords(searchTerm, searchNamesOnly));
-            filteredItems = items.filter(i => matchedTitles.has(i.title));
+            const matchedUUIDs = new Set(searchRecords(searchTerm, searchNamesOnly));
+            filteredItems = items.filter(i => matchedUUIDs.has(i.uuid));
         }
         groupItems(filteredItems);
     }
@@ -353,10 +332,10 @@
 
     function loadItem(item) {
         try {
-            const rec = getRecordData(item.title);
+            const rec = getRecordData(item.uuid);
             selectedRecord = rec;
+            selectedUUID = item.uuid;
             isRecordDirty = false;
-            oldTitle = rec.Title; // Store original title
             showPassword = false;
             isNewRecord = false;
             showGenOptions = false;
@@ -385,7 +364,7 @@
             ModTime: new Date().toISOString(),
         };
         isRecordDirty = false;
-        oldTitle = "";
+        selectedUUID = "";
         showPassword = true;
         isNewRecord = true;
         showGenOptions = false;
@@ -464,60 +443,24 @@
     }
 
     async function saveRecord() {
-        if (!selectedRecord.Title) {
-            alert("Title is required");
-            return;
-        }
-
-        const duplicate = items.find(i =>
-            i.title === selectedRecord.Title &&
-            (i.group || "") === (selectedRecord.Group || "") &&
-            (isNewRecord || i.title !== oldTitle)
-        );
-
-        if (duplicate) {
-            recordGuardConfig = {
-                title: "Duplicate Record",
-                message: `A record named "${selectedRecord.Title}" already exists in "${selectedRecord.Group || 'Ungrouped'}". Save anyway?`,
-                confirmLabel: "Save anyway",
-                extraLabel: "",
-                cancelLabel: "Cancel",
-                onConfirm: async () => {
-                    showRecordGuard = false;
-                    await performSave();
-                    if (recordGuardProceed) { recordGuardProceed(); recordGuardProceed = null; }
-                },
-                onExtra: null,
-            };
-            showRecordGuard = true;
-            return false;
-        }
-
         await performSave();
         return true;
     }
 
     async function performSave() {
         try {
-            selectedRecord.ModTime = new Date().toISOString();
-
-            if (isNewRecord) {
-                addRecord(selectedRecord);
-            } else {
-                const oldRec = getRecordData(oldTitle);
-                if (oldRec && oldRec.Password !== selectedRecord.Password) {
-                    selectedRecord.PasswordHistory = pushPasswordHistory(
-                        selectedRecord.PasswordHistory,
-                        oldRec.Password,
-                    );
-                }
-                updateRecord(oldTitle, selectedRecord);
-            }
+            selectedUUID = updateRecordFields(isNewRecord ? "" : selectedUUID, {
+                Title:    selectedRecord.Title,
+                Group:    selectedRecord.Group,
+                Username: selectedRecord.Username,
+                Password: selectedRecord.Password,
+                URL:      selectedRecord.URL,
+                Notes:    selectedRecord.Notes,
+            });
 
             const items = getDatabaseData();
             dbItems.set(items);
 
-            oldTitle = selectedRecord.Title;
             isNewRecord = false;
             isDirty = true;
             isRecordDirty = false;
@@ -550,7 +493,7 @@
 
     async function performDelete() {
         try {
-            deleteRecord(selectedRecord.Title);
+            deleteRecord(selectedUUID);
             selectedRecord = null;
             isNewRecord = false;
             isDirty = true;
@@ -876,15 +819,13 @@
                         {#each groupedItems[group] as item}
                             <li
                                 role="option"
-                                aria-selected={!!(selectedRecord &&
-                                    selectedRecord.Title === item.title)}
+                                aria-selected={item.uuid === selectedUUID}
                                 tabindex="0"
-                                class:selected={selectedRecord &&
-                                    selectedRecord.Title === item.title}
+                                class:selected={item.uuid === selectedUUID}
                                 on:click={() => selectItem(item)}
                                 on:dblclick={async () => {
                                     try {
-                                        const rec = getRecordData(item.title);
+                                        const rec = getRecordData(item.uuid);
                                         if (rec && rec.Password) {
                                             await copyToClipboard(rec.Password, 'pass');
                                         }

@@ -1,6 +1,6 @@
 <script>
     import { createEventDispatcher } from "svelte";
-    import { updateDBInfo } from "../wasm.js";
+    import { updateDBFields } from "../wasm.js";
 
     export let info = {};
     export let filename = "";
@@ -31,7 +31,7 @@
 
     function save() {
         try {
-            updateDBInfo(name, description, lastSaveUser);
+            updateDBFields({ Name: name, Description: description, LastSaveUser: lastSaveUser });
             dispatch("save");
         } catch (e) {
             console.error(e);
