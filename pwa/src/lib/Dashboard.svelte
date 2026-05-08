@@ -49,6 +49,80 @@
 
     let isDirty = false;
     let isSaving = false;
+    let isRecordDirty = false;
+    let flashModTime = false;
+    $: if (!selectedRecord) isRecordDirty = false;
+    let dbSavedBy = "";
+    let dbInfoIsDirty = false;
+    let dbInfoInstance = null;
+    let showGuard = false;
+    let guardConfig = {};
+    $: if (!showModal) dbInfoIsDirty = false;
+    let showRecordGuard = false;
+    let recordGuardProceed = null;
+    let recordGuardConfig = { title: "", message: "", confirmLabel: "OK", extraLabel: "", cancelLabel: "Cancel", onConfirm: null, onExtra: null };
+
+    let groupSuggestion = "";
+    let groupGhostSuffix = "";
+    let usernameSuggestion = "";
+    let usernameGhostSuffix = "";
+
+    function clearGhosts() {
+        groupSuggestion = "";
+        groupGhostSuffix = "";
+        usernameSuggestion = "";
+        usernameGhostSuffix = "";
+    }
+
+    function applySuggestion(field, value) {
+        const s = getAutocompleteSuggestion(field, value);
+        if (s && s.toLowerCase() !== value.toLowerCase()) {
+            return { suggestion: s, ghost: s.slice(value.length) };
+        }
+        return { suggestion: "", ghost: "" };
+    }
+
+    function onGroupInput() {
+        isRecordDirty = true;
+        const v = selectedRecord.Group;
+        if (!v) { groupSuggestion = ""; groupGhostSuffix = ""; return; }
+        const r = applySuggestion("group", v);
+        groupSuggestion = r.suggestion;
+        groupGhostSuffix = r.ghost;
+    }
+
+    function onGroupKeydown(e) {
+        if (e.key === "Tab" && groupSuggestion) {
+            e.preventDefault();
+            selectedRecord = { ...selectedRecord, Group: groupSuggestion };
+            groupSuggestion = "";
+            groupGhostSuffix = "";
+        } else if (e.key === "Escape") {
+            groupSuggestion = "";
+            groupGhostSuffix = "";
+        }
+    }
+
+    function onUsernameInput() {
+        isRecordDirty = true;
+        const v = selectedRecord.Username;
+        if (!v) { usernameSuggestion = ""; usernameGhostSuffix = ""; return; }
+        const r = applySuggestion("username", v);
+        usernameSuggestion = r.suggestion;
+        usernameGhostSuffix = r.ghost;
+    }
+
+    function onUsernameKeydown(e) {
+        if (e.key === "Tab" && usernameSuggestion) {
+            e.preventDefault();
+            selectedRecord = { ...selectedRecord, Username: usernameSuggestion };
+            usernameSuggestion = "";
+            usernameGhostSuffix = "";
+        } else if (e.key === "Escape") {
+            usernameSuggestion = "";
+            usernameGhostSuffix = "";
+        }
+    }
 
     let generator;
     let showGenOptions = false;
@@ -95,9 +169,33 @@
             confirmLabel: "OK",
             cancelLabel: "Cancel",
             type: "confirm",
+            showFooter: true,
+            onCancel: null,
             ...config,
         };
         showModal = true;
+    }
+
+    function guardUnsavedRecord(proceed) {
+        if (!isRecordDirty) { proceed(); return; }
+        recordGuardProceed = proceed;
+        recordGuardConfig = {
+            title: "Unsaved Changes",
+            message: `"${selectedRecord.Title}" has unsaved changes.`,
+            confirmLabel: "Save",
+            extraLabel: "Discard",
+            cancelLabel: "Cancel",
+            onConfirm: async () => {
+                showRecordGuard = false;
+                const saved = await saveRecord();
+                if (saved && recordGuardProceed) { recordGuardProceed(); recordGuardProceed = null; }
+            },
+            onExtra: () => {
+                showRecordGuard = false;
+                if (recordGuardProceed) { recordGuardProceed(); recordGuardProceed = null; }
+            },
+        };
+        showRecordGuard = true;
     }
 
     function handleKeydown(event) {
@@ -159,7 +257,10 @@
     dbItems.subscribe((val) => {
         items = val || [];
         filterItems();
-        // Autofocus search when items are loaded (DB opened)
+        try {
+            const info = getDatabaseInfo();
+            dbSavedBy = info.who || "";
+        } catch (e) { /* ignore if DB not ready */ }
         setTimeout(() => {
             if (searchInput) searchInput.focus();
         }, 100);
@@ -306,13 +407,41 @@
     }
 
     async function saveRecord() {
-        try {
-            if (!selectedRecord.Title) {
-                alert("Title is required");
-                return;
-            }
+        if (!selectedRecord.Title) {
+            alert("Title is required");
+            return;
+        }
 
-            // Update mod time
+        const duplicate = items.find(i =>
+            i.title === selectedRecord.Title &&
+            (i.group || "") === (selectedRecord.Group || "") &&
+            (isNewRecord || i.title !== oldTitle)
+        );
+
+        if (duplicate) {
+            recordGuardConfig = {
+                title: "Duplicate Record",
+                message: `A record named "${selectedRecord.Title}" already exists in "${selectedRecord.Group || 'Ungrouped'}". Save anyway?`,
+                confirmLabel: "Save anyway",
+                extraLabel: "",
+                cancelLabel: "Cancel",
+                onConfirm: async () => {
+                    showRecordGuard = false;
+                    await performSave();
+                    if (recordGuardProceed) { recordGuardProceed(); recordGuardProceed = null; }
+                },
+                onExtra: null,
+            };
+            showRecordGuard = true;
+            return false;
+        }
+
+        await performSave();
+        return true;
+    }
+
+    async function performSave() {
+        try {
             selectedRecord.ModTime = new Date().toISOString();
 
             if (isNewRecord) {
@@ -321,16 +450,13 @@
                 updateRecord(oldTitle, selectedRecord);
             }
 
-            // Refresh list
             const items = getDatabaseData();
             dbItems.set(items);
 
-            // Re-select to refresh state (or update oldTitle)
             oldTitle = selectedRecord.Title;
             isNewRecord = false;
             isDirty = true;
 
-            // Clear search if we updated the title so it doesn't get filtered out if it no longer matches
             if (searchTerm) {
                 searchTerm = "";
                 filterItems();
@@ -383,17 +509,7 @@
                     info: info,
                     filename: $selectedFile ? $selectedFile.name : "",
                 },
-                confirmLabel: "Close", // Or hide the confirm button? DBInfo has its own Save button.
-                // If we want to hide Modal footer buttons, we might need more Modal config.
-                // For now, "Close" acts as cancel/close.
-                type: "info", // "info" isn't a standard type in Modal yet, but it falls back to primary/alert logic maybe?
-                // Actually Modal type controls button styles.
-                // Let's use 'alert' type so we only have one button effectively?
-                // Waait, DBInfo has a "Save" button inside it.
-                // If the user clicks Save in DBInfo, it dispatches 'save'.
-                // We should probably just have a "Close" button in the modal footer.
-                type: "alert",
-                confirmLabel: "Close",
+                showFooter: false,
             });
         } catch (e) {
             console.error(e);
@@ -504,22 +620,46 @@
         type={modalConfig.type}
         confirmLabel={modalConfig.confirmLabel}
         cancelLabel={modalConfig.cancelLabel}
+        extraLabel={modalConfig.extraLabel || ""}
+        showFooter={modalConfig.showFooter !== false}
         on:confirm={() => {
             if (modalConfig.onConfirm) modalConfig.onConfirm();
             showModal = false;
         }}
-        on:cancel={() => (showModal = false)}
+        on:extra={() => {
+            if (modalConfig.onExtra) modalConfig.onExtra();
+            showModal = false;
+        }}
+        on:cancel={() => {
+            if (modalConfig.onCancel) {
+                modalConfig.onCancel();
+            } else if (modalConfig.component === DBInfo && dbInfoIsDirty) {
+                guardConfig = {
+                    title: "Unsaved Changes",
+                    message: "DB Info has unsaved changes.",
+                    confirmLabel: "Save",
+                    extraLabel: "Discard",
+                    cancelLabel: "Cancel",
+                };
+                showGuard = true;
+            } else {
+                showModal = false;
+            }
+        }}
     >
         {#if modalConfig.component}
             <svelte:component
                 this={modalConfig.component}
                 {...modalConfig.props}
+                bind:this={dbInfoInstance}
+                on:dirty={(e) => dbInfoIsDirty = e.detail}
                 on:save={async () => {
-                    showModal = false;
-                    isDirty = true; // Mark DB as dirty after info update (though main.go modifies in-memory DB directly too)
-                    // Actually, main.go modifies the struct. saveDB() marshals that struct.
-                    // So we should mark as dirty.
                     await save(true);
+                    try {
+                        const fresh = getDatabaseInfo();
+                        dbSavedBy = fresh.who || "";
+                        modalConfig = { ...modalConfig, props: { ...modalConfig.props, info: fresh } };
+                    } catch(e) {}
                 }}
             />
         {:else}
@@ -528,10 +668,45 @@
     </Modal>
 {/if}
 
+{#if showRecordGuard}
+    <Modal
+        title={recordGuardConfig.title}
+        type="confirm"
+        confirmLabel={recordGuardConfig.confirmLabel}
+        extraLabel={recordGuardConfig.extraLabel || ""}
+        cancelLabel={recordGuardConfig.cancelLabel}
+        on:confirm={async () => { if (recordGuardConfig.onConfirm) await recordGuardConfig.onConfirm(); }}
+        on:extra={() => { if (recordGuardConfig.onExtra) recordGuardConfig.onExtra(); }}
+        on:cancel={() => { showRecordGuard = false; recordGuardProceed = null; }}
+    >
+        <p>{recordGuardConfig.message}</p>
+    </Modal>
+{/if}
+
+{#if showGuard}
+    <Modal
+        title={guardConfig.title}
+        message={guardConfig.message}
+        type="confirm"
+        confirmLabel={guardConfig.confirmLabel}
+        extraLabel={guardConfig.extraLabel}
+        cancelLabel={guardConfig.cancelLabel}
+        on:confirm={async () => {
+            showGuard = false;
+            if (dbInfoInstance) dbInfoInstance.doSave();
+            showModal = false;
+        }}
+        on:extra={() => { showGuard = false; showModal = false; }}
+        on:cancel={() => { showGuard = false; }}
+    >
+        <p>{guardConfig.message}</p>
+    </Modal>
+{/if}
+
 <div class="dashboard">
     <div class="sidebar">
         <div class="toolbar">
-            <Menu let:close>
+            <Menu let:close savedBy={dbSavedBy}>
                 <button
                     on:click={() => {
                         close();
@@ -541,26 +716,23 @@
                 <button
                     on:click={() => {
                         close();
-                        showDBInfo();
-                    }}>DB Info</button
+                        toggleCollapseAtStartup();
+                    }}>{collapseAtStartup ? '✓' : '\u00a0\u00a0'} Collapse at startup</button
                 >
                 <hr
                     style="border: 0; border-top: 1px solid #444; margin: 5px 0;"
                 />
+                <button
+                    on:click={() => {
+                        close();
+                        showDBInfo();
+                    }}>DB Info</button
+                >
                 <button
                     on:click={() => {
                         close();
                         closeDb();
                     }}>Close DB</button
-                >
-                <hr
-                    style="border: 0; border-top: 1px solid #444; margin: 5px 0;"
-                />
-                <button
-                    on:click={() => {
-                        close();
-                        toggleCollapseAtStartup();
-                    }}>{collapseAtStartup ? '✓' : '\u00a0\u00a0'} Collapse at startup</button
                 >
             </Menu>
             <!-- Visual Indicator for Dirty State (e.g. dot on menu or title?) 
@@ -674,7 +846,7 @@
                 <div class="details-header">
                     <button
                         class="close-details"
-                        on:click={() => (selectedRecord = null)}>✕</button
+                        on:click={() => guardUnsavedRecord(() => { selectedRecord = null; })}>✕</button
                     >
                     <h2>{isNewRecord ? "New Record" : selectedRecord.Title}</h2>
                 </div>
@@ -869,10 +1041,12 @@
                 </div>
 
                 <hr />
+                {#if !isNewRecord}
                 <div class="meta">
                     <small>Modified: {formatDate(selectedRecord.ModTime)}</small
                     >
                 </div>
+                {/if}
             </div>
         {:else}
             <div class="empty-state">Select a record to view details</div>

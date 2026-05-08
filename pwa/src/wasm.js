@@ -145,8 +145,8 @@ export function deleteRecord(title) {
     }
 }
 
-export function updateDBInfo(name, description) {
-    const err = window.updateDBInfo(name, description);
+export function updateDBInfo(name, description, lastSaveUser) {
+    const err = window.updateDBInfo(name, description, lastSaveUser ?? "");
     if (err) {
         throw new Error(err);
     }
