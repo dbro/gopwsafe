@@ -227,6 +227,12 @@
             }
         }
 
+        if ((event.ctrlKey || event.metaKey) && event.key === "s") {
+            event.preventDefault();
+            if (selectedRecord) saveRecord();
+            return;
+        }
+
         if (!selectedRecord) return;
 
         if ((event.ctrlKey || event.metaKey) && event.key === "u") {
@@ -296,15 +302,12 @@
             );
         });
         groupedItems = grouped;
-        console.log("Grouped items keys:", Object.keys(grouped));
     }
 
     function selectItem(item) {
-        console.log("selectItem called for:", item.title);
         try {
             const rec = getRecordData(item.title);
             selectedRecord = rec;
-            console.log("Record loaded:", rec ? rec.Title : "null");
             oldTitle = rec.Title; // Store original title
             showPassword = false;
             isNewRecord = false;
@@ -723,6 +726,9 @@
                         }
                     } else if (e.key === "ArrowUp") {
                         e.preventDefault();
+                    } else if (e.key === "Escape") {
+                        searchTerm = "";
+                        filterItems();
                     }
                 }}
             />
