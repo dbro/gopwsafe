@@ -87,6 +87,7 @@
     let showPassword = false;
     let groupedItems = {};
     let searchInput; // Reference for autofocus
+    let titleInput; // Reference for new-record autofocus
     let copyUserSuccess = false;
     let copyPassSuccess = false;
     let copyUrlSuccess = false;
@@ -94,6 +95,8 @@
     let showHistory = false;
 
     let isDirty = false;
+    let isRecordDirty = false;
+    let flashModTime = false;
 
     let groupSuggestion = "";
     let groupGhostSuffix = "";
@@ -116,6 +119,7 @@
     }
 
     function onGroupInput() {
+        isRecordDirty = true;
         const v = selectedRecord.Group;
         if (!v) { groupSuggestion = ""; groupGhostSuffix = ""; return; }
         const r = applySuggestion("group", v);
@@ -136,6 +140,7 @@
     }
 
     function onUsernameInput() {
+        isRecordDirty = true;
         const v = selectedRecord.Username;
         if (!v) { usernameSuggestion = ""; usernameGhostSuffix = ""; return; }
         const r = applySuggestion("username", v);
@@ -199,10 +204,25 @@
         modalConfig = {
             confirmLabel: "OK",
             cancelLabel: "Cancel",
+            extraLabel: "",
             type: "confirm",
             ...config,
         };
         showModal = true;
+    }
+
+    function guardUnsavedRecord(proceed) {
+        if (!isRecordDirty) { proceed(); return; }
+        triggerModal({
+            title: "Unsaved Changes",
+            message: `"${selectedRecord.Title}" has unsaved changes.`,
+            confirmLabel: "Save",
+            extraLabel: "Discard",
+            cancelLabel: "Cancel",
+            type: "confirm",
+            onConfirm: async () => { await saveRecord(); proceed(); },
+            onExtra: () => proceed(),
+        });
     }
 
     function handleKeydown(event) {
@@ -230,6 +250,15 @@
         if ((event.ctrlKey || event.metaKey) && event.key === "s") {
             event.preventDefault();
             if (selectedRecord) saveRecord();
+            return;
+        }
+
+        if ((event.ctrlKey || event.metaKey) && event.key === "n") {
+            const tag = document.activeElement.tagName.toLowerCase();
+            if (tag !== "input" && tag !== "textarea") {
+                event.preventDefault();
+                createNewRecord();
+            }
             return;
         }
 
@@ -305,9 +334,14 @@
     }
 
     function selectItem(item) {
+        guardUnsavedRecord(() => loadItem(item));
+    }
+
+    function loadItem(item) {
         try {
             const rec = getRecordData(item.title);
             selectedRecord = rec;
+            isRecordDirty = false;
             oldTitle = rec.Title; // Store original title
             showPassword = false;
             isNewRecord = false;
@@ -321,7 +355,10 @@
     }
 
     function createNewRecord() {
-        // Template for new record
+        guardUnsavedRecord(() => startNewRecord());
+    }
+
+    function startNewRecord() {
         selectedRecord = {
             Title: "New Record",
             Group: "",
@@ -329,11 +366,11 @@
             Password: "",
             URL: "",
             Notes: "",
-            // Add other fields as necessary with defaults
             UUID: Array(16).fill(0),
             CreateTime: new Date().toISOString(),
             ModTime: new Date().toISOString(),
         };
+        isRecordDirty = false;
         oldTitle = "";
         showPassword = true;
         isNewRecord = true;
@@ -341,6 +378,7 @@
         showHistory = false;
         historyRevealedSet = new Set();
         clearGhosts();
+        setTimeout(() => { if (titleInput) { titleInput.focus(); titleInput.select(); } }, 50);
     }
 
     // Bind this to the new record event from the menu
@@ -442,6 +480,9 @@
             oldTitle = selectedRecord.Title;
             isNewRecord = false;
             isDirty = true;
+            isRecordDirty = false;
+            flashModTime = true;
+            setTimeout(() => flashModTime = false, 1200);
 
             // Clear search if we updated the title so it doesn't get filtered out if it no longer matches
             if (searchTerm) {
@@ -617,8 +658,13 @@
         type={modalConfig.type}
         confirmLabel={modalConfig.confirmLabel}
         cancelLabel={modalConfig.cancelLabel}
+        extraLabel={modalConfig.extraLabel || ""}
         on:confirm={() => {
             if (modalConfig.onConfirm) modalConfig.onConfirm();
+            showModal = false;
+        }}
+        on:extra={() => {
+            if (modalConfig.onExtra) modalConfig.onExtra();
             showModal = false;
         }}
         on:cancel={() => (showModal = false)}
@@ -804,9 +850,11 @@
                     <label for="record-title">Title</label>
                     <input
                         id="record-title"
+                        bind:this={titleInput}
                         type="text"
                         bind:value={selectedRecord.Title}
                         placeholder="Title"
+                        on:input={() => isRecordDirty = true}
                     />
                 </div>
 
@@ -896,6 +944,7 @@
                                 type={showPassword ? "text" : "password"}
                                 bind:value={selectedRecord.Password}
                                 placeholder="Password"
+                                on:input={() => isRecordDirty = true}
                             />
                             <button
                                 class="icon-btn"
@@ -929,6 +978,7 @@
                     on:generate={(e) => {
                         selectedRecord.Password = e.detail;
                         showPassword = true;
+                        isRecordDirty = true;
                     }}
                 >
                     {#if !isNewRecord && selectedRecord.PasswordHistory}
@@ -972,6 +1022,7 @@
                             type="text"
                             bind:value={selectedRecord.URL}
                             placeholder="URL"
+                            on:input={() => isRecordDirty = true}
                         />
                         {#if selectedRecord.URL}
                             <a
@@ -1001,12 +1052,13 @@
                         id="record-notes"
                         bind:value={selectedRecord.Notes}
                         placeholder="Notes"
+                        on:input={() => isRecordDirty = true}
                         use:autoGrow={selectedRecord}
                     ></textarea>
                 </div>
 
                 <div class="actions-row">
-                    <button class="primary" on:click={saveRecord}
+                    <button class="primary" disabled={!isRecordDirty} on:click={saveRecord}
                         >Save Record</button
                     >
                     {#if !isNewRecord}
@@ -1018,8 +1070,7 @@
 
                 <hr />
                 <div class="meta">
-                    <small>Modified: {formatDate(selectedRecord.ModTime)}</small
-                    >
+                    <small class:flash-mod-time={flashModTime}>Modified: {formatDate(selectedRecord.ModTime)}</small>
                 </div>
             </div>
         {:else}
@@ -1345,6 +1396,11 @@
     button.primary:hover {
         background: #0056b3;
     }
+    button.primary:disabled {
+        background: #444;
+        color: #777;
+        cursor: default;
+    }
     button.danger {
         background: #dc3545;
         color: white;
@@ -1356,6 +1412,15 @@
     }
     button.danger:hover {
         background: #a71d2a;
+    }
+
+    @keyframes flashModTime {
+        0%   { background: #007bff; color: #fff; border-radius: 3px; }
+        60%  { background: #007bff; color: #fff; border-radius: 3px; }
+        100% { background: transparent; color: inherit; }
+    }
+    .flash-mod-time {
+        animation: flashModTime 1.2s ease-out forwards;
     }
 
     @keyframes fadeOut {
