@@ -8,6 +8,7 @@
     export let cancelLabel = "Cancel";
     export let extraLabel = ""; // optional middle button
     export let type = "confirm"; // 'confirm', 'alert', 'danger'
+    export let showFooter = true;
 
     const dispatch = createEventDispatcher();
 
@@ -40,6 +41,7 @@
         on:click|stopPropagation
     >
         <div class="header">
+            <button class="close-x" on:click={onCancel}>✕</button>
             <h3>{title}</h3>
         </div>
         <div class="body">
@@ -47,6 +49,7 @@
                 <p>{message}</p>
             </slot>
         </div>
+        {#if showFooter}
         <div class="footer">
             {#if type !== "alert"}
                 <button class="secondary" on:click={onCancel}
@@ -62,6 +65,7 @@
                 on:click={onConfirm}>{confirmLabel}</button
             >
         </div>
+        {/if}
     </div>
 </div>
 
@@ -91,11 +95,27 @@
     .header {
         padding: 15px 20px;
         border-bottom: 1px solid #333;
+        display: flex;
+        align-items: center;
+        gap: 10px;
     }
     .header h3 {
         margin: 0;
         font-size: 1.2rem;
         color: #e0e0e0;
+        flex: 1;
+    }
+    .close-x {
+        background: none;
+        border: none;
+        color: #ccc;
+        font-size: 1.2rem;
+        cursor: pointer;
+        padding: 0;
+        line-height: 1;
+    }
+    .close-x:hover {
+        color: #fff;
     }
     .body {
         padding: 20px;

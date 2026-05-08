@@ -15,6 +15,8 @@
         isOpen = false;
     }
 
+    export let savedBy = "";
+
     // @ts-ignore
     const appVersion = __APP_VERSION__;
 </script>
@@ -30,7 +32,7 @@
         <div class="backdrop" role="presentation" on:click={close} on:keydown={(e) => e.key === 'Escape' && close()}></div>
         <div class="menu-dropdown">
             <slot {close}></slot>
-            <div class="menu-footer">v{appVersion}</div>
+            <div class="menu-footer">{savedBy ? savedBy : "v" + appVersion}</div>
         </div>
     {/if}
 </div>

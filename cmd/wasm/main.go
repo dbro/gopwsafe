@@ -185,15 +185,13 @@ func updateDBInfo(this js.Value, args []js.Value) interface{} {
 	if db == nil {
 		return "database not open"
 	}
-	if len(args) != 2 {
-		return "invalid arguments: expected (name, description)"
+	if len(args) != 3 {
+		return "invalid arguments: expected (name, description, lastSaveUser)"
 	}
 
-	name := args[0].String()
-	description := args[1].String()
-
-	db.Header.Name = name
-	db.Header.Description = description
+	db.Header.Name = args[0].String()
+	db.Header.Description = args[1].String()
+	db.Header.LastSaveUser = []byte(args[2].String())
 
 	return nil
 }

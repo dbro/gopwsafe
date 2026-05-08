@@ -35,7 +35,7 @@ Because gopwsafe is a PWA, installing it once from a clean profile means launchi
 +
 [source,bash]
 ----
-GOOS=js GOARCH=wasm go build -o pwa/public/gopwsafe.wasm ./cmd/wasm/
+GOOS=js GOARCH=wasm go build -ldflags="-X 'github.com/tkuhlman/gopwsafe/pwsafe.Version=$(git describe --tags --always)'" -o pwa/public/gopwsafe.wasm ./cmd/wasm/
 ----
 
 2. Build and preview the frontend:
