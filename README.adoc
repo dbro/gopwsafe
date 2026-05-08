@@ -23,6 +23,10 @@ Visit https://dbro.github.io/gopwsafe in a modern browser (Chrome, Edge, Firefox
 Click the *Install* button that appears in your browser's address bar or the in-page install prompt to add gopwsafe to your home screen or app launcher.
 Once installed it works offline without any further setup.
 
+For best security, install from a browser profile that has no extensions (or only extensions you fully trust).
+Browser extensions in the same profile can access page content, so a malicious extension could read your unlocked data.
+Because gopwsafe is a PWA, installing it once from a clean profile means launching it later is just opening an app — no extra friction day-to-day.
+
 === Self-host / compile from source
 
 **Prerequisites:** Go 1.21+, Node.js 18+
