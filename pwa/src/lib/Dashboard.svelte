@@ -42,6 +42,7 @@
     let showPassword = false;
     let groupedItems = {};
     let searchInput; // Reference for autofocus
+    let titleInput; // Reference for new-record autofocus
     let copyUserSuccess = false;
     let copyPassSuccess = false;
     let copyUrlSuccess = false;
@@ -168,6 +169,7 @@
         modalConfig = {
             confirmLabel: "OK",
             cancelLabel: "Cancel",
+            extraLabel: "",
             type: "confirm",
             showFooter: true,
             onCancel: null,
@@ -296,11 +298,14 @@
     }
 
     function selectItem(item) {
-        console.log("selectItem called for:", item.title);
+        guardUnsavedRecord(() => loadItem(item));
+    }
+
+    function loadItem(item) {
         try {
             const rec = getRecordData(item.title);
             selectedRecord = rec;
-            console.log("Record loaded:", rec ? rec.Title : "null");
+            isRecordDirty = false;
             oldTitle = rec.Title; // Store original title
             showPassword = false;
             isNewRecord = false;
@@ -312,7 +317,10 @@
     }
 
     function createNewRecord() {
-        // Template for new record
+        guardUnsavedRecord(() => startNewRecord());
+    }
+
+    function startNewRecord() {
         selectedRecord = {
             Title: "New Record",
             Group: "",
@@ -320,15 +328,19 @@
             Password: "",
             URL: "",
             Notes: "",
-            // Add other fields as necessary with defaults
             UUID: Array(16).fill(0),
             CreateTime: new Date().toISOString(),
             ModTime: new Date().toISOString(),
         };
+        isRecordDirty = false;
         oldTitle = "";
         showPassword = true;
         isNewRecord = true;
         showGenOptions = false;
+        showHistory = false;
+        historyRevealedSet = new Set();
+        clearGhosts();
+        setTimeout(() => { if (titleInput) { titleInput.focus(); titleInput.select(); } }, 50);
     }
 
     // Bind this to the new record event from the menu
@@ -456,6 +468,9 @@
             oldTitle = selectedRecord.Title;
             isNewRecord = false;
             isDirty = true;
+            isRecordDirty = false;
+            flashModTime = true;
+            setTimeout(() => flashModTime = false, 1200);
 
             if (searchTerm) {
                 searchTerm = "";
@@ -855,9 +870,11 @@
                     <label for="record-title">Title</label>
                     <input
                         id="record-title"
+                        bind:this={titleInput}
                         type="text"
                         bind:value={selectedRecord.Title}
                         placeholder="Title"
+                        on:input={() => isRecordDirty = true}
                     />
                 </div>
 
@@ -926,6 +943,7 @@
                             type={showPassword ? "text" : "password"}
                             bind:value={selectedRecord.Password}
                             placeholder="Password"
+                            on:input={() => isRecordDirty = true}
                         />
                         <button on:click={() => (showPassword = !showPassword)}>
                             {showPassword ? "Hide" : "Show"}
@@ -985,6 +1003,7 @@
                     on:generate={(e) => {
                         selectedRecord.Password = e.detail;
                         showPassword = true;
+                        isRecordDirty = true;
                     }}
                 />
                 <div class="field">
@@ -996,6 +1015,7 @@
                             type="text"
                             bind:value={selectedRecord.URL}
                             placeholder="URL"
+                            on:input={() => isRecordDirty = true}
                         />
                         {#if selectedRecord.URL}
                             <a
@@ -1025,12 +1045,13 @@
                         id="record-notes"
                         bind:value={selectedRecord.Notes}
                         placeholder="Notes"
+                        on:input={() => isRecordDirty = true}
                         use:autoGrow={selectedRecord}
                     ></textarea>
                 </div>
 
                 <div class="actions-row">
-                    <button class="primary" on:click={saveRecord}
+                    <button class="primary" disabled={!isRecordDirty} on:click={saveRecord}
                         >Save Record</button
                     >
                     {#if !isNewRecord}
@@ -1043,8 +1064,7 @@
                 <hr />
                 {#if !isNewRecord}
                 <div class="meta">
-                    <small>Modified: {formatDate(selectedRecord.ModTime)}</small
-                    >
+                    <small class:flash-mod-time={flashModTime}>Modified: {formatDate(selectedRecord.ModTime)}</small>
                 </div>
                 {/if}
             </div>
@@ -1294,6 +1314,11 @@
     button.primary:hover {
         background: #0056b3;
     }
+    button.primary:disabled {
+        background: #444;
+        color: #777;
+        cursor: default;
+    }
     button.danger {
         background: #dc3545;
         color: white;
@@ -1305,6 +1330,15 @@
     }
     button.danger:hover {
         background: #a71d2a;
+    }
+
+    @keyframes flashModTime {
+        0%   { background: #007bff; color: #fff; border-radius: 3px; }
+        60%  { background: #007bff; color: #fff; border-radius: 3px; }
+        100% { background: transparent; color: inherit; }
+    }
+    .flash-mod-time {
+        animation: flashModTime 1.2s ease-out forwards;
     }
 
     @keyframes fadeOut {

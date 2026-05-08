@@ -6,6 +6,7 @@
     export let message = "Are you sure?";
     export let confirmLabel = "OK";
     export let cancelLabel = "Cancel";
+    export let extraLabel = ""; // optional middle button
     export let type = "confirm"; // 'confirm', 'alert', 'danger'
     export let showFooter = true;
 
@@ -17,6 +18,10 @@
 
     function onCancel() {
         dispatch("cancel");
+    }
+
+    function onExtra() {
+        dispatch("extra");
     }
 </script>
 
@@ -50,6 +55,9 @@
                 <button class="secondary" on:click={onCancel}
                     >{cancelLabel}</button
                 >
+            {/if}
+            {#if extraLabel}
+                <button class="secondary" on:click={onExtra}>{extraLabel}</button>
             {/if}
             <button
                 class:danger={type === "danger"}
