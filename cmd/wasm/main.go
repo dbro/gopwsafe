@@ -208,7 +208,7 @@ func updateRecordFields(this js.Value, args []js.Value) interface{} {
 		case "Username":
 			rec.Username = value
 		case "Password":
-			if value != rec.Password {
+			if value != rec.Password && rec.Password != "" {
 				rec.PasswordHistory = pushPasswordHistory(rec.PasswordHistory, rec.Password)
 			}
 			rec.Password = value

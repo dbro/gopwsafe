@@ -458,6 +458,8 @@
                 Notes:    selectedRecord.Notes,
             });
 
+            selectedRecord = getRecordData(selectedUUID);
+
             const items = getDatabaseData();
             dbItems.set(items);
 
