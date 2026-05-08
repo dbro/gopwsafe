@@ -369,7 +369,6 @@
         isNewRecord = true;
         showGenOptions = false;
         showHistory = false;
-        historyRevealedSet = new Set();
         clearGhosts();
         setTimeout(() => { if (titleInput) { titleInput.focus(); titleInput.select(); } }, 50);
     }
