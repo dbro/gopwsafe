@@ -157,7 +157,7 @@ test.describe('UI Improvements', () => {
 
         // Verify Success Alert
         // The modal content changes to a generic success message
-        await expect(page.getByText('Detail updated. Don\'t forget to save the database file.')).toBeVisible();
+        await expect(page.getByText('Database info saved.')).toBeVisible();
         await page.locator('.modal .footer button').click();
     });
 

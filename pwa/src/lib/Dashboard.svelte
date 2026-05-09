@@ -520,7 +520,8 @@
                     info: info,
                     filename: $selectedFile ? $selectedFile.name : "",
                 },
-                showFooter: false,
+                type: "alert",
+                confirmLabel: "Close",
             });
         } catch (e) {
             console.error(e);
@@ -669,7 +670,14 @@
                     try {
                         const fresh = getDatabaseInfo();
                         dbSavedBy = fresh.who || "";
-                        modalConfig = { ...modalConfig, props: { ...modalConfig.props, info: fresh } };
+                        modalConfig = {
+                            ...modalConfig,
+                            component: null,
+                            message: "Database info saved.",
+                            type: "alert",
+                            confirmLabel: "Close",
+                            showFooter: true,
+                        };
                     } catch(e) {}
                 }}
             />
