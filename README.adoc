@@ -14,6 +14,7 @@ image::gopwsafe-screenshot.png[Screenshot of gopwsafe, width=33%]
 == Why yet another Password Safe app?
 
 Cryptographer Bruce Schneier invented Password Safe in the 1990s, and it was open sourced in 2002. That means the database encryption is well-known and well-tested at this point; and there are multiple https://www.pwsafe.org/relatedprojects.shtml[password managers for Password Safe files] so there is no vendor lock-in. However, those applications are a grab bag of single-platform offerings with overly complex user interfaces. The goal of gopwsafe is to be a new alternative that is
+
 - *compatible* with all Password Safe v3 files and applications
 - *cross-platform* for mobile and desktop use on all major operating systems,
 - *focused* on the most common tasks (search, groups, generating passwords) without overloading the user interface,
@@ -22,6 +23,7 @@ Cryptographer Bruce Schneier invented Password Safe in the 1990s, and it was ope
 == Who is this for?
 
 People who
+
 - prefer to work with a local file to store the password database, NOT a hosted service such as 1Password or LastPass
 - need to access the same password safe file on multiple platforms, including mobile devices, and possibly using different Password Safe apps
 - need only these essential fields: *Group, Title, Username, Password, URL, Notes*
@@ -30,6 +32,7 @@ People who
 == Features
 
 gopwsafe offers a limited set of features, preferring to be a small app that is simple to operate and understand. These essential capabilities are:
+
 - *search* to find items that contain specific search terms in their title field, or in all available fields
 - browse *groups* of items
 - *copy* values into the clipboard to later paste into login/password fields
